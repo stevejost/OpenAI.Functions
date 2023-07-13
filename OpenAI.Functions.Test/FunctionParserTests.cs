@@ -28,16 +28,7 @@ namespace OpenAI.Functions.Test
             
             functions.Should().NotBeNullOrEmpty();
         }
-
-        [Fact]
-        public void GptFunctionsCanBeExecuted()
-        {
-            var mapper = new GptFunctionMapper();
-            var wcTest = new GetCurrentWeatherTest();
-
-           // wcTest.GetFunction("GetCurrentWeather")("San Francisco, CA").Should().Be(100);
-        }
-
+       
         [Fact]
         public void GptChatResponseDecodesProperly()
         {
@@ -50,6 +41,20 @@ namespace OpenAI.Functions.Test
             result.Should().Be("The current temperature in Sacramento, CA is 100");
         }
 
+        [Fact]
+        public void GptChatResponseDecodesProperlyWithoutType()
+        {
+            var mapper = new GptFunctionMapper();            
+            string json = "{\n  \"Location\": \"Sacramento, CA\"\n}";
+            var type = mapper.FindTypeByMethodName("GetCurrentWeather");
+            type.Should().Be(typeof(GetCurrentWeatherTest));
+
+            var result = mapper.GetChatResponseFromMethod(type, "GetCurrentWeather", json);
+
+            result.Should().Be("The current temperature in Sacramento, CA is 100");
+        }
+
+        [GptClass]
         class GetCurrentWeatherTest
         {           
             [GptFunction("Get the current weather in a given location")]

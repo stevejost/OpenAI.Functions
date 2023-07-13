@@ -1,6 +1,7 @@
 ﻿using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
+using OpenAI.Functions.Attributes;
 using OpenAI.Functions.Model;
 using System;
 using System.Collections.Generic;
@@ -146,6 +147,37 @@ namespace OpenAI.Functions
             var result = (string)method.Invoke(type, new object[] { deserializedData });
 
             return result;
+        }
+
+        public Type FindTypeByMethodName(string name)
+        {
+            var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+
+            foreach (var assembly in assemblies)
+            {
+                var types = assembly.GetTypes();
+
+                foreach (var type in types)
+                {
+                    // check if the type has the SearchableClass attribute
+                    if (Attribute.IsDefined(type, typeof(GptClassAttribute)))
+                    {
+                        var methods = type.GetMethods();
+
+                        foreach (var method in methods)
+                        {
+                            if (method.Name == name)
+                            {
+                                // Return the type instead of the method
+                                return type;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Return null if no matching type is found
+            return null;
         }
 
     }
