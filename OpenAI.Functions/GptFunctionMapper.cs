@@ -47,22 +47,34 @@ namespace OpenAI.Functions
         {
             var function = new GptFunction();
             // get annotated parameters
-            var parameters = method.GetParameters().Where(p => p.GetCustomAttributes(typeof(Attributes.GptFunctionParameterAttribute), false).Length > 0);
+            var parameters = method.GetParameters().Where(p => p.ParameterType.IsSubclassOf(typeof(GptRequestArguments)));
 
             function.Name = method.Name;
             function.Description = method.GetCustomAttribute<Attributes.GptFunctionAttribute>().GetDescription();
             function.Required = GetRequiredParametersFromMethod(method);
             foreach(var parameter in parameters)
             {
-                var parameterType = parameter.ParameterType;
-                var parameterName = parameter.Name;
-                var parameterDescription = parameter.GetCustomAttribute<Attributes.GptFunctionParameterAttribute>().GetDescription();
+                // find parameters with GptRequestArguments as the base class
+                if (parameter.ParameterType.IsSubclassOf(typeof(GptRequestArguments)))
+                {
+                    var properties = new Dictionary<string, GptParameterProperties>();
+                    var propertiesType = parameter.ParameterType.GetProperties();
 
-                function.Parameters.Properties.Add(parameterName, new GptParameterProperties()
-                {                    
-                    Description = parameterDescription,
-                    Type = MapValueTypesToName(parameterType)
-                });
+                    foreach(var property in propertiesType)
+                    {
+                        var propertyType = property.PropertyType;
+                        var propertyTypeName = MapValueTypesToName(propertyType);
+                        var propertyDescription = property.GetCustomAttribute<Attributes.GptParameterAttribute>().GetDescription();
+
+                        properties.Add(property.Name, new GptParameterProperties
+                        {
+                            Type = propertyTypeName,
+                            Description = propertyDescription
+                        });
+                    }
+
+                    function.Parameters.Properties = properties;
+                }
             }
 
             return function;
@@ -83,15 +95,24 @@ namespace OpenAI.Functions
         }
 
         public List<string> GetRequiredParametersFromMethod(MethodInfo method)
-        { 
-            var parameters = method.GetParameters();
+        {
+            var parameters = method.GetParameters().Where(p => p.ParameterType.IsSubclassOf(typeof(GptRequestArguments)));
             var required = new List<string>();
+
+
 
             foreach(var parameter in parameters)
             {
-                if (!parameter.IsOptional)
+                //get properties that are GptParameterAttributes
+                var properties = parameter.ParameterType.GetProperties().Where(p => p.GetCustomAttribute<Attributes.GptParameterAttribute>() != null);
+                foreach(var prop in properties)
                 {
-                    required.Add(parameter.Name);
+                    // determine if prop is nullable
+                    var isNullable = Nullable.GetUnderlyingType(prop.PropertyType) != null;
+                    if(!isNullable)
+                    {
+                        required.Add(prop.Name);
+                    }
                 }
             }
 
@@ -116,8 +137,16 @@ namespace OpenAI.Functions
             return json;
         }
 
-        
-       
+        public string GetChatResponseFromMethod(Type type, string methodName, string jsonArguments)
+        {                        
+            var method = type.GetMethod(methodName);
+            var methodParams = method.GetParameters();
+            var paramType = methodParams[0].ParameterType;
+            var deserializedData = JsonConvert.DeserializeObject(jsonArguments, paramType);
+            var result = (string)method.Invoke(type, new object[] { deserializedData });
+
+            return result;
+        }
 
     }
 }
