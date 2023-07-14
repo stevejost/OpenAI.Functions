@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Configuration;
 using OpenAI.API;
 using OpenAI.API.Model;
+using OpenAI.Functions;
 
 namespace OpenAI.Console.Example
 {
@@ -18,9 +19,13 @@ namespace OpenAI.Console.Example
             var client = new ApiClient(aiConfig.ApiKey);
             string userInput = string.Empty;
 
+            var mapper = new GptFunctionMapper();
+            
+
             var baseChatGptReq = new ChatRequest()
             {
-                Model = "gpt-3.5-turbo-16k"                
+                Model = "gpt-3.5-turbo-16k",
+                Functions = mapper.GetFunctionsFromType(typeof(ExampleLogicClass))
             };
 
             while (userInput.ToLower() != "bye")
@@ -39,8 +44,20 @@ namespace OpenAI.Console.Example
 
                 foreach(var choice in chatResponse.Choices)
                 {
-                    System.Console.WriteLine($"{choice.Message.Role}: {choice.Message.Content}");
+                    if(!string.IsNullOrEmpty(choice.Message.Content))
+                    {
+                        System.Console.WriteLine($"{choice.Message.Role}: {choice.Message.Content}");
+                    }
+                    
+                    if(choice.Message.FunctionCall != null)
+                    {
+                        var response = mapper.GetChatResponseFromMethod(choice.Message.FunctionCall.Name, choice.Message.FunctionCall.Arguments);
+                        System.Console.WriteLine($"Function Response ({choice.Message.FunctionCall.Name}): {response}"); 
+                    }
+                    
                 }
+                System.Console.WriteLine();
+                baseChatGptReq.Messages.Clear();
                 // TODO: Process user input here.
                 
             }

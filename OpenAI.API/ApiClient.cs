@@ -50,6 +50,7 @@ namespace OpenAI.API
 
             //var testRequest = JsonConvert.SerializeObject(chatRequest);
 
+
             var contractResolver = new DefaultContractResolver
             {
                 NamingStrategy = new SnakeCaseNamingStrategy()
@@ -63,11 +64,11 @@ namespace OpenAI.API
                 
             });
 
-            var response = await this._client.PostAsync<ChatResponse>(req);
-
-            if(response != null)
+            var response = await this._client.ExecutePostAsync<ChatResponse>(req);
+                        
+            if(response != null && response.Data != null)
             {
-                return response;
+                return response.Data;
             }
 
             return null;
