@@ -3,4 +3,4 @@ OpenAI.Functions is a library for the OpenAI API. It is a wrapper for the OpenAI
 
 It allows you to use the OpenAI functions in the chat API and map the functions to their respective C# functions.
 
-See the tests in the **OpenAI.Functions.Tests** project for examples.
+See the tests in the **OpenAI.Functions.Tests** and **OpenAI.Console.Example** projects for examples.
