@@ -149,6 +149,18 @@ namespace OpenAI.Functions
             return result;
         }
 
+        public string GetChatResponseFromMethod(string methodName, string jsonArguments)
+        {
+            var type = FindTypeByMethodName(methodName);
+            var method = type.GetMethod(methodName);
+            var methodParams = method.GetParameters();
+            var paramType = methodParams[0].ParameterType;
+            var deserializedData = JsonConvert.DeserializeObject(jsonArguments, paramType);
+            var result = (string)method.Invoke(type, new object[] { deserializedData });
+
+            return result;
+        }
+
         public Type FindTypeByMethodName(string name)
         {
             var assemblies = AppDomain.CurrentDomain.GetAssemblies();
